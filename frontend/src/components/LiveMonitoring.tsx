@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Upload,
   AlertTriangle,
@@ -7,11 +7,60 @@ import {
   MapPin,
   Eye,
   Video,
-  Layers
+  Layers,
+  X
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const LiveMonitoring = () => {
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [isAnalysing, setIsAnalysing] = useState(false);
+
+  // Cleanup the memory-heavy object URL when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+    };
+  }, [videoPreview]);
+
+  const handleVideoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // If there was a previous preview, revoke it to save memory
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      
+      setSelectedVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const clearSelection = (e) => {
+    e.preventDefault();
+    setSelectedVideo(null);
+    setVideoPreview(null);
+  };
+
+  const triggerAnalysis = async () => {
+    if (!selectedVideo) {
+      alert("Please upload a video file first.");
+      return;
+    }
+
+    setIsAnalysing(true);
+    
+    // Logic for backend integration:
+    // const formData = new FormData();
+    // formData.append("file", selectedVideo);
+    // await fetch('your-api-url', { method: 'POST', body: formData });
+
+    // Simulating API delay for UI feedback
+    setTimeout(() => {
+      setIsAnalysing(false);
+      alert("Analysis complete (Simulation)");
+    }, 3000);
+  };
+
   return (
     <section
       id="live"
@@ -55,33 +104,63 @@ const LiveMonitoring = () => {
             <div className="flex items-center justify-between px-6 py-4 bg-[#3F4E4F]/40 border-b border-white/5">
               <div className="flex items-center gap-2.5">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isAnalysing ? 'bg-green-400' : 'bg-red-400'} opacity-75`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isAnalysing ? 'bg-green-500' : 'bg-red-500'}`}></span>
                 </span>
                 <span className="text-white font-mono uppercase tracking-wider text-xs font-bold">
                   Video Analysis Interface
                 </span>
               </div>
-              <span className="text-white/40 text-xs font-mono">
-                STATUS: IDLE
+              <span className="text-white/40 text-xs font-mono uppercase">
+                STATUS: {isAnalysing ? "Analysing..." : selectedVideo ? "Ready" : "Idle"}
               </span>
             </div>
 
             {/* DROP ZONE CONTAINER */}
             <div className="p-6 space-y-6">
-              <label className="border-2 border-dashed border-[#A27B5C]/30 bg-white/[0.02] rounded-xl h-[340px] flex flex-col items-center justify-center text-center p-6 cursor-pointer hover:border-[#A27B5C] hover:bg-white/[0.04] transition-all duration-300 group">
-                <input type="file" accept="video/*" className="hidden" />
+              <label className="relative border-2 border-dashed border-[#A27B5C]/30 bg-white/[0.02] rounded-xl min-h-[340px] flex flex-col items-center justify-center text-center p-6 cursor-pointer hover:border-[#A27B5C] hover:bg-white/[0.04] transition-all duration-300 group overflow-hidden">
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleVideoUpload}
+                />
                 
-                <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <Upload className="w-6 h-6 text-[#A27B5C]" />
-                </div>
+                {!videoPreview ? (
+                  <>
+                    <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Upload className="w-6 h-6 text-[#A27B5C]" />
+                    </div>
 
-                <h3 className="text-xl font-bold text-white tracking-tight">
-                  Drop video footage here
-                </h3>
-                <p className="text-white/60 text-xs mt-1">
-                  or click to browse your local directory
-                </p>
+                    <h3 className="text-xl font-bold text-white tracking-tight">
+                      Drop video footage here
+                    </h3>
+                    <p className="text-white/60 text-xs mt-1">
+                      or click to browse your local directory
+                    </p>
+                  </>
+                ) : (
+                  <div className="w-full relative">
+                    <video 
+                      src={videoPreview} 
+                      className="max-h-[300px] mx-auto rounded-lg"
+                      controls
+                    />
+                    <button 
+                      onClick={clearSelection}
+                      className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors z-20"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {selectedVideo && (
+                  <p className="text-[#A27B5C] text-sm mt-3 font-mono truncate max-w-full px-4">
+                    Selected: {selectedVideo.name}
+                  </p>
+                )}
+
                 <div className="mt-6 px-3 py-1.5 rounded bg-white/5 border border-white/5 text-[10px] font-mono text-white/40 uppercase tracking-wider">
                   MP4, AVI, MOV, MKV • Max 500MB
                 </div>
@@ -108,8 +187,16 @@ const LiveMonitoring = () => {
 
               {/* PIPELINE TRIGGER CTA ACTIONS */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#A27B5C] text-white font-bold text-xs font-mono uppercase tracking-wider hover:bg-[#6B5B4D] active:scale-95 transition-all shadow-sm">
-                  <Eye className="w-4 h-4" /> Analyse Video
+                <button 
+                  onClick={triggerAnalysis}
+                  disabled={isAnalysing || !selectedVideo}
+                  className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-xs font-mono uppercase tracking-wider active:scale-95 transition-all shadow-sm ${
+                    isAnalysing || !selectedVideo 
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                    : 'bg-[#A27B5C] text-white hover:bg-[#6B5B4D]'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" /> {isAnalysing ? 'Processing...' : 'Analyse Video'}
                 </button>
                 <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs font-mono uppercase tracking-wider hover:bg-white/10 active:scale-95 transition-all">
                   <Video className="w-4 h-4 text-[#A27B5C]" /> Sample Feed
@@ -122,7 +209,6 @@ const LiveMonitoring = () => {
             </div>
           </div>
 
-          {/* TELEMETRY METRICS PANEL (RIGHT) */}
           <div className="space-y-4">
             
             {/* SEVERITY ACCORDION PILLS */}
@@ -242,11 +328,11 @@ const LiveMonitoring = () => {
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
-                { label: "Cars Detected", value: "0", color: "from-[#A27B5C] to-[#6B5B4D]" },
-                { label: "Buses Tracked", value: "0", color: "from-[#8D6E63] to-[#5D4037]" },
-                { label: "Trucks Tracked", value: "0", color: "from-[#4E342E] to-[#3E2723]" },
-                { label: "Bikes Logged", value: "0", color: "from-[#6B5B4D] to-[#2C3639]" },
-                { label: "Autos Logged", value: "0", color: "from-[#A27B5C] to-[#3F4E4F]" },
+                { label: "Cars Detected", color: "from-[#A27B5C] to-[#6B5B4D]" },
+                { label: "Buses Tracked", color: "from-[#8D6E63] to-[#5D4037]" },
+                { label: "Trucks Tracked", color: "from-[#4E342E] to-[#3E2723]" },
+                { label: "Bikes Logged", color: "from-[#6B5B4D] to-[#2C3639]" },
+                { label: "Autos Logged", color: "from-[#A27B5C] to-[#3F4E4F]" },
               ].map((item, index) => (
                 <div
                   key={index}
@@ -283,6 +369,7 @@ const LiveMonitoring = () => {
         </div>
 
       </div>
+      
     </section>
   );
 };
