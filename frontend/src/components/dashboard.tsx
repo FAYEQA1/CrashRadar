@@ -19,28 +19,28 @@ const Dashboard = () => {
   const stats = [
     {
       title: "Total Incidents",
-      value: "128",
+      value: "0",
       sub: "All detections",
       glow: "hover:shadow-red-500/10 border-l-4 border-l-red-500",
       icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
     },
     {
       title: "Critical",
-      value: "09",
+      value: "0",
       sub: "Immediate response",
       glow: "hover:shadow-orange-500/10 border-l-4 border-l-orange-500",
       icon: <Siren className="w-5 h-5 text-orange-500" />,
     },
     {
       title: "High",
-      value: "31",
+      value: "0",
       sub: "Priority dispatch",
       glow: "hover:shadow-yellow-500/10 border-l-4 border-l-yellow-500",
       icon: <ShieldAlert className="w-5 h-5 text-yellow-500" />,
     },
     {
       title: "Low",
-      value: "88",
+      value: "0",
       sub: "Normal incidents",
       glow: "hover:shadow-green-500/10 border-l-4 border-l-green-500",
       icon: <Activity className="w-5 h-5 text-green-500" />,
