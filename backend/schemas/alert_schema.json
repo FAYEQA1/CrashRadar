@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IncidentAlert",
+  "type": "object",
+  "properties": {
+    "incident_id": { "type": "integer" },
+    "camera_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "collision_type": { "type": "string" },
+    "speed_before_impact_kmh": { "type": "number" },
+    "snapshot_path": { "type": "string" }
+  },
+  "required": ["incident_id", "camera_id", "timestamp", "severity", "snapshot_path"]
+}

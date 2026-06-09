@@ -1,0 +1,26 @@
+{
+  "cameras": [
+    {
+      "id": "CAMERA-1",
+      "location_name": "Masab Tank Intersection",
+      "stream_source": "test_vedio/sample1.mp4",
+      "status": "ACTIVE",
+      "pixel_to_meter_ratio": 0.047,
+      "coordinates": {
+        "latitude": 17.4023,
+        "longitude": 78.4521
+      }
+    },
+    {
+      "id": "CAMERA-2",
+      "location_name": "Banjara Hills Road No. 1",
+      "stream_source": "test_vedio/sample2.mp4",
+      "status": "ACTIVE",
+      "pixel_to_meter_ratio": 0.052,
+      "coordinates": {
+        "latitude": 17.4156,
+        "longitude": 78.4411
+      }
+    }
+  ]
+}

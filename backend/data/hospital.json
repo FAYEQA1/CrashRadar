@@ -1,16 +1,43 @@
-[
-  {
-    "name": "Osmania General Hospital Emergency Care",
-    "lat": 17.3785,
-    "lng": 78.4744,
-    "phone": "+91-40-24600144",
-    "distance_km": 1.2
-  },
-  {
-    "name": "Apollo Emergency Response Unit",
-    "lat": 17.4156,
-    "lng": 78.4110,
-    "phone": "+91-40-23607777",
-    "distance_km": 3.8
-  }
-]
+{
+  "hospitals": [
+    {
+      "id": "hosp_01",
+      "name": "Apollo Hospitals Jubilee Hills",
+      "tier": "LEVEL-1-TRAUMA",
+      "contact_number": "+91-40-23607777",
+      "total_ambulances": 8,
+      "available_ambulances": 3,
+      "coordinates": {
+        "latitude": 17.4265,
+        "longitude": 78.4121
+      },
+      "assigned_zone": "CAMERA-1"
+    },
+    {
+      "id": "hosp_02",
+      "name": "Care Hospitals Banjara Hills",
+      "tier": "LEVEL-2-EMERGENCY",
+      "contact_number": "+91-40-61656565",
+      "total_ambulances": 5,
+      "available_ambulances": 2,
+      "coordinates": {
+        "latitude": 17.4138,
+        "longitude": 78.4424
+      },
+      "assigned_zone": "CAMERA-2"
+    },
+    {
+      "id": "hosp_03",
+      "name": "Vasavi Hospital",
+      "tier": "LEVEL-2-EMERGENCY",
+      "contact_number": "+91-40-23422111",
+      "total_ambulances": 4,
+      "available_ambulances": 2,
+      "coordinates": {
+        "latitude": 17.4042,
+        "longitude": 78.4482
+      },
+      "assigned_zone": "CAMERA-3"
+    }
+  ]
+}
