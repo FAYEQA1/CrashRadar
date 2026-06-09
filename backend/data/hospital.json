@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Osmania General Hospital Emergency Care",
+    "lat": 17.3785,
+    "lng": 78.4744,
+    "phone": "+91-40-24600144",
+    "distance_km": 1.2
+  },
+  {
+    "name": "Apollo Emergency Response Unit",
+    "lat": 17.4156,
+    "lng": 78.4110,
+    "phone": "+91-40-23607777",
+    "distance_km": 3.8
+  }
+]
