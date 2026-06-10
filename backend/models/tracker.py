@@ -114,16 +114,17 @@ class VehicleTracker:
     # --------------------------------------------------
     # REGISTER / UPDATE
     # --------------------------------------------------
-    def _register(self, bbox: list, center: tuple) -> None:
+    def _register(self, bbox: list, center: tuple, cls: int = 2) -> None:
         v_id = self.next_v_id
         self.next_v_id += 1
         self.active_vehicles[v_id] = {
             "id": v_id,
             "bbox": bbox,
             "center": center,
+            "cls": cls,
             "last_seen": self.frame_count,
             "visible": True,
-        }
+    }
 
     def _update_track(self, v_id: int, bbox: list, center: tuple) -> None:
         self.active_vehicles[v_id].update({
@@ -162,7 +163,15 @@ class VehicleTracker:
         for data in self.active_vehicles.values():
             data["visible"] = False
 
-        for bbox in detections:
+        for det in detections:
+    # support both plain bbox lists and {"bbox":..., "cls":...} dicts
+            if isinstance(det, dict):
+                bbox = det["bbox"]
+                cls  = det.get("cls", 2)
+            else:
+                bbox = det
+                cls  = 2
+
             center = self._center(bbox)
             matched_id = self._find_best_match(bbox, center, used_ids)
 
@@ -171,11 +180,11 @@ class VehicleTracker:
                 self._update_track(matched_id, bbox, center)
                 current_frame_vehicles.append(self.active_vehicles[matched_id])
             else:
-                self._register(bbox, center)
+                self._register(bbox, center, cls)
                 new_id = self.next_v_id - 1
                 current_frame_vehicles.append(self.active_vehicles[new_id])
 
-        self._remove_lost_vehicles()
+                self._remove_lost_vehicles()
 
-        # ← KEY FIX: return only this frame's detections, not all active tracks
-        return current_frame_vehicles
+                # ← KEY FIX: return only this frame's detections, not all active tracks
+                return current_frame_vehicles

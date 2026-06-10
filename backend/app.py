@@ -2,7 +2,9 @@ import os
 import sys
 import threading
 from flask import Flask, jsonify, request, send_from_directory
+# Remove the old CORS line and replace with:
 from flask_cors import CORS
+ # allows all origins on all routes — fine for presentation
 
 # Dynamic path resolution injection hook
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -15,12 +17,14 @@ from service.detection import DetectionService
 # NEW IMPORTS: Connecting your new services and background system queue
 from service.camera_service import CameraService
 from service.hospital_service import HospitalService
-from queue.worker import IncidentQueueWorker
+# Change this:
+from event_queue.worker import IncidentQueueWorker
+
 
 app = Flask(__name__)
-# Enable CORS so your React frontend can query endpoints on port 5000
-CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+# Enable CORS so your React frontend can query endpoints on port 5000
+CORS(app) 
 # Auto-initialize SQLite data structures on app start
 initialize_database()
 
@@ -100,7 +104,7 @@ def trigger_detection():
         return jsonify({"status": "error", "message": f"Camera profile {camera_id} not registered."}), 404
 
     # Resolve video target stream dynamically from the JSON schema configuration
-    video_target = os.path.normpath(os.path.join(BASE_DIR, cam_config["stream_source"]))
+    video_target = data.get("video_path", os.path.join(BASE_DIR, "test_vedio", "sample1.mp4"))
     camera_label = cam_config["location_name"]
 
     if not os.path.exists(video_target):
