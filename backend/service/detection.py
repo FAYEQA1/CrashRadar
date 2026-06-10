@@ -125,7 +125,7 @@ class DetectionService:
                     if cls in VEHICLE_CLASSES and conf > MIN_CONFIDENCE:
                         detections.append(list(map(int, box.xyxy[0])))
 
-            tracked_vehicles = tracker.update(detections)
+            tracked_vehicles = tracker.update(detections, frame)
 
             for vehicle in tracked_vehicles:
                 v_id   = vehicle["id"]
