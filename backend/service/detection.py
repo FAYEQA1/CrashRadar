@@ -48,10 +48,16 @@ def pixel_displacement_to_ms(px, fps): return px * PIXEL_TO_METER * fps
 def now_str(): return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 def ms_to_kmh(ms): return ms * 3.6
 
+
 def score_severity(speed_ms):
-    if speed_ms >= SEVERITY_HIGH_SPEED: return "HIGH"
-    elif speed_ms >= SEVERITY_LOW_SPEED: return "MEDIUM"
-    return "LOW"
+    if speed_ms >= SEVERITY_CRITICAL_SPEED:
+        return "CRITICAL"
+    elif speed_ms >= SEVERITY_HIGH_SPEED:
+        return "HIGH"
+    elif speed_ms >= SEVERITY_LOW_SPEED:
+        return "MEDIUM"
+    else:
+        return "LOW"
 
 def direction_vector(history, window=5):
     if len(history) < window: return (0.0, 0.0)
