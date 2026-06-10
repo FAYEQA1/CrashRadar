@@ -89,24 +89,39 @@ const LiveMonitoring = () => {
 
   // ── polling ────────────────────────────────────────────────────────────────
 
-  const startPolling = () => {
-    clearPoll();
-    pollRef.current = setInterval(async () => {
-      try {
-        const res  = await fetch(`${API_BASE}/incidents`);
-        const data = await res.json();
-        // Only show incidents newer than when we started
-        const fresh = data.slice(0, Math.max(0, data.length - baselineRef.current));
-        if (fresh.length > 0) {
-          setIncidents(fresh.slice(0, 3));
-          setStats(deriveStats(fresh));
-        }
-      } catch (_) {}
-    }, POLL_INTERVAL_MS);
-  };
 
   const clearPoll = () => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const startPolling = () => {
+    clearPoll();
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/incidents`);
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+          console.error("Invalid API response:", data);
+          return;
+        }
+
+        console.log("Incidents:", data.length);
+
+        // Show latest 3 incidents in logs
+        setIncidents(data.slice(0, 3));
+
+        // Calculate stats from ALL incidents
+        setStats(deriveStats(data));
+
+      } catch (error) {
+        console.error("Polling Error:", error);
+      }
+    }, POLL_INTERVAL_MS);
   };
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -190,8 +205,18 @@ const LiveMonitoring = () => {
       startPolling();
 
       // 4. Stop polling after 30s (adjust to match your video length)
-      setTimeout(() => {
+      setTimeout(async () => {
         clearPoll();
+        // One final fetch to catch anything missed
+        try {
+          const res  = await fetch(`${API_BASE}/incidents`);
+          const data = await res.json();
+          const fresh = data.slice(0, Math.max(0, data.length - baselineRef.current));
+          if (fresh.length > 0) {
+            setIncidents(data.slice(0, 3));
+            setStats(deriveStats(data));
+          }
+        } catch (_) {}
         setIsSampleRunning(false);
         setSampleDone(true);
       }, 30000);
