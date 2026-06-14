@@ -28,6 +28,9 @@ CORS(app)
 # Auto-initialize SQLite data structures on app start
 initialize_database()
 
+from routes.incident_routes import incident_bp
+app.register_blueprint(incident_bp)
+
 # NEW INSTANCE INITIALIZATIONS
 camera_manager = CameraService()
 hospital_manager = HospitalService()
