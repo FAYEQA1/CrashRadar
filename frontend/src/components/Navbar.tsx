@@ -44,9 +44,7 @@ const Navbar = () => {
 
         {/* DESKTOP-ONLY CTA BUTTON MATRICES */}
         <div className='hidden lg:flex items-center space-x-3 md:space-x-4'>
-          <button className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#2C3639] text-[#A27B5C] border border-[#A27B5C]/20 hover:bg-[#3F4E4F] transition-all duration-300 hover:scale-105 active:scale-95">
-            <Moon className="w-4 h-4"/>
-          </button>
+          
           <button className="px-5 py-2.5 bg-gradient-to-r from-[#A27B5C] to-[#2C3639] text-white text-[12px] md:text-[13px] font-mono uppercase tracking-widest transition-all duration-300 hover:scale-105 active:scale-95 rounded-xl shadow-md shadow-[#A27B5C]/10">
             Get Started
           </button>
@@ -111,9 +109,7 @@ const Navbar = () => {
               <button className="flex-1 py-3 bg-gradient-to-r from-[#A27B5C] to-[#2C3639] text-white rounded-xl text-center shadow-md font-mono text-xs uppercase tracking-widest">
                 Get Started
               </button>
-              <button className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#2C3639] text-[#A27B5C] border border-[#A27B5C]/20" aria-label="Toggle Theme">
-                <Moon className="w-4 h-4"/>
-              </button>
+              
             </div>
           </div>
         </div>
