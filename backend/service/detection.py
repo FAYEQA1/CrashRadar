@@ -26,6 +26,7 @@ COLLISION_MIN_SPEED_BEFORE   = 1.0
 ACCIDENT_LOCK_DURATION       = 8.0
 SEVERITY_LOW_SPEED  = 2.0
 SEVERITY_HIGH_SPEED = 5.0
+SEVERITY_CRITICAL_SPEED = 8.0 
 VEHICLE_CLASSES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
 BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
@@ -123,7 +124,10 @@ class DetectionService:
                     cls  = int(box.cls[0])
                     conf = float(box.conf[0])
                     if cls in VEHICLE_CLASSES and conf > MIN_CONFIDENCE:
-                        detections.append(list(map(int, box.xyxy[0])))
+                        detections.append({
+                            "bbox": list(map(int, box.xyxy[0])),
+                            "cls": cls
+                        })
 
             tracked_vehicles = tracker.update(detections, frame)
 
@@ -132,7 +136,8 @@ class DetectionService:
                 bbox   = vehicle["bbox"]
                 cx, cy = vehicle["center"]
                 current_frame_ids.add(v_id)
-
+                vehicle_class[v_id] = vehicle.get("cls", 2)
+                total_seen_ids.add(v_id)
                 hist = vehicle_history[v_id]
                 px_disp = math.sqrt((cx-hist[-1][0])**2+(cy-hist[-1][1])**2) if hist else 0.0
                 hist.append((cx, cy))
@@ -186,8 +191,11 @@ class DetectionService:
                     max_speed = max(pre_a, pre_b)
                     both_warmed = (len(raw_speed_history[id_a]) >= SPEED_SMOOTHING_WINDOW and
                                    len(raw_speed_history[id_b]) >= SPEED_SMOOTHING_WINDOW)
+                    
 
-                    if iou >= COLLISION_IOU_THRESHOLD and max_speed >= COLLISION_MIN_SPEED_BEFORE and both_warmed:
+                    is_moto = (vehicle_class.get(id_a, 2) == 3 or vehicle_class.get(id_b, 2) == 3)
+                    threshold = COLLISION_IOU_THRESHOLD_MOTO if is_moto else COLLISION_IOU_THRESHOLD
+                    if iou >= threshold and max_speed >= COLLISION_MIN_SPEED_BEFORE and both_warmed:
                         active_accidents[pair_key] = current_time + ACCIDENT_LOCK_DURATION
                         severity  = score_severity(max_speed)
                         dir_a     = direction_vector(vehicle_history[id_a])
