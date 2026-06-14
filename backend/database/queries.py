@@ -11,7 +11,7 @@ import datetime
 from database.models import get_connections
 
 
-def insert_incidents(
+def insert_incidents (
     timestamps,
     vehicle_ids,
     severity,
@@ -20,6 +20,7 @@ def insert_incidents(
     status,
     collision_distance,
     speed_before_collision,
+    vehicle_type="unknown",
     created_at=None
 ):
     connections = get_connections()
@@ -69,9 +70,10 @@ def insert_incidents(
             status,
             collision_distance,
             speed_before_collision,
+            vehicle_type,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         timestamps,
         vehicle_ids,
@@ -81,6 +83,7 @@ def insert_incidents(
         status,
         collision_distance,
         speed_before_collision,
+        vehicle_type,
         created_at
     ))
 
@@ -182,6 +185,7 @@ if __name__ == '__main__':
         location="CAMERA-2",
         status="PENDING",
         collision_distance=34.5,
+        vehicle_type='car',
         speed_before_collision=27,
     )
 

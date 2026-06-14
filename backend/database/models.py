@@ -27,7 +27,8 @@ def create_incidents_table():
                    status TEXT,
                    collision_distance REAL,
                    speed_before_collision REAL,
-                   created_at TEXT)
+                   vehicle_type TEXT,
+                   created_at DATETIME DEFAULT CURRENT_TIMESTAMP)
     """)
     connections.commit()
     connections.close()
