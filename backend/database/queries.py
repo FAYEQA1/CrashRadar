@@ -176,6 +176,25 @@ def get_pending_incidents():
     return incidents
 
 
+def get_incident_stats():
+    """Return counts grouped by severity, plus total."""
+    connections = get_connections()
+    cursor = connections.cursor()
+    cursor.execute("""
+        SELECT severity, COUNT(*) FROM INCIDENTS GROUP BY severity
+    """)
+    rows = cursor.fetchall()
+    connections.close()
+
+    stats = {"total": 0, "critical": 0, "high": 0, "medium": 0, "low": 0}
+    for severity, count in rows:
+        stats["total"] += count
+        key = severity.lower()
+        if key in stats:
+            stats[key] = count
+    return stats
+
+
 if __name__ == '__main__':
     insert_incidents(
         timestamps="2026-05-18 20:00:00",
