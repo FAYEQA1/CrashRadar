@@ -117,6 +117,17 @@ const Dashboard = () => {
     return `http://localhost:5000/static/${cleanPath}`;
   };
 
+  // Add near the top, with other state
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 10;
+    const totalPages = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
+    const pagedIncidents = incidents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    // Reset to page 1 whenever fresh data comes in
+    useEffect(() => {
+      setPage(1);
+    }, [incidents.length]);
+
   return (
     <div className="min-h-screen bg-[#F8F5F0] px-4 sm:px-6 lg:px-8 pt-10 pb-16 text-[#2C3639]">
       {/* NAVIGATION BAR */}
@@ -297,7 +308,7 @@ const Dashboard = () => {
                     </tr>
                   )}
 
-                  {incidents.slice(0, 10).map((incident) => (
+                  {pagedIncidents.map((incident) => (
                     <tr key={incident.id} className="hover:bg-[#F8F5F0]/40 transition-colors group">
                       <td className="px-6 py-4 font-mono font-bold text-[#2C3639]">
                         #CR-{incident.id}
@@ -341,6 +352,40 @@ const Dashboard = () => {
                 </tbody>
               </table>
             </div>
+            {incidents.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#DCD7C9]/60 bg-[#F8F5F0]/30">
+                <p className="text-xs font-mono text-[#3F4E4F]">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, incidents.length)} of {incidents.length}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
+                      page === 1
+                        ? "border-[#DCD7C9] text-[#3F4E4F]/40 cursor-not-allowed"
+                        : "border-[#DCD7C9] text-[#2C3639] hover:bg-[#2C3639] hover:text-white"
+                    }`}
+                  >
+                    Prev
+                  </button>
+                  <span className="px-3 py-1.5 text-xs font-mono font-bold text-[#3F4E4F]">
+                    Page {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
+                      page === totalPages
+                        ? "border-[#DCD7C9] text-[#3F4E4F]/40 cursor-not-allowed"
+                        : "border-[#DCD7C9] text-[#2C3639] hover:bg-[#2C3639] hover:text-white"
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+)}
           </div>
 
           {/* ACTION SIDE PANEL */}

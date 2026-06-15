@@ -8,7 +8,10 @@ import {
   Eye,
   Video,
   Layers,
-  X
+  X,
+  Hospital,
+  Phone,
+  CheckCircle2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -44,7 +47,6 @@ function deriveStats(incidents) {
     }
   }
 
-  // Merge MEDIUM into MODERATE for display
   counts.MODERATE = (counts.MODERATE || 0) + (counts.MEDIUM || 0);
 
   return {
@@ -59,6 +61,19 @@ function deriveStats(incidents) {
   };
 }
 
+// Severity breakdown for ONLY this run's fresh incidents
+function deriveRunSummary(freshIncidents) {
+  const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  for (const inc of freshIncidents) {
+    const sev = inc.severity?.toUpperCase();
+    if (sev in counts) counts[sev]++;
+  }
+  return {
+    total: freshIncidents.length,
+    ...counts,
+  };
+}
+
 const LiveMonitoring = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoPreview,  setVideoPreview]  = useState(null);
@@ -70,6 +85,8 @@ const LiveMonitoring = () => {
   const [sampleError,     setSampleError]     = useState(null);
   const [incidents,       setIncidents]       = useState([]);
   const [stats,           setStats]           = useState(null);
+  const [runSummary,      setRunSummary]      = useState(null);
+  const [hospitalRecs,    setHospitalRecs]    = useState([]);
   const pollRef        = useRef(null);
   const baselineRef    = useRef(0);
 
@@ -88,7 +105,6 @@ const LiveMonitoring = () => {
   }, []);
 
   // ── polling ────────────────────────────────────────────────────────────────
-
 
   const clearPoll = () => {
     if (pollRef.current) {
@@ -110,14 +126,8 @@ const LiveMonitoring = () => {
           return;
         }
 
-        console.log("Incidents:", data.length);
-
-        // Show latest 3 incidents in logs
         setIncidents(data.slice(0, 3));
-
-        // Calculate stats from ALL incidents
         setStats(deriveStats(data));
-
       } catch (error) {
         console.error("Polling Error:", error);
       }
@@ -143,6 +153,8 @@ const LiveMonitoring = () => {
     setIncidents([]);
     setStats(null);
     setCameraError(null);
+    setRunSummary(null);
+    setHospitalRecs([]);
   };
 
   // ── file upload ────────────────────────────────────────────────────────────
@@ -169,6 +181,18 @@ const LiveMonitoring = () => {
     if (!selectedVideo) { alert("Please upload a video file first."); return; }
     setIsAnalysing(true);
     setTimeout(() => { setIsAnalysing(false); alert("Analysis complete (Simulation)"); }, 3000);
+  };
+
+  // ── fetch hospital recommendations for a camera ─────────────────────────────
+
+  const fetchHospitalRecs = async (cameraId) => {
+    try {
+      const res = await fetch(`${API_BASE}/hospitals/nearest/${cameraId}`);
+      const data = await res.json();
+      setHospitalRecs(Array.isArray(data) ? data : []);
+    } catch (_) {
+      setHospitalRecs([]);
+    }
   };
 
   // ── SAMPLE FEED ────────────────────────────────────────────────────────────
@@ -207,14 +231,30 @@ const LiveMonitoring = () => {
       // 4. Stop polling after 30s (adjust to match your video length)
       setTimeout(async () => {
         clearPoll();
-        // One final fetch to catch anything missed
         try {
           const res  = await fetch(`${API_BASE}/incidents`);
           const data = await res.json();
-          const fresh = data.slice(0, Math.max(0, data.length - baselineRef.current));
+          const freshCount = Math.max(0, data.length - baselineRef.current);
+          const fresh = data.slice(0, freshCount);
+
           if (fresh.length > 0) {
             setIncidents(data.slice(0, 3));
             setStats(deriveStats(data));
+          }
+
+          // Run summary for THIS run only
+          setRunSummary(deriveRunSummary(fresh));
+
+          // If any CRITICAL incident occurred this run, recommend hospitals
+          const criticalFresh = fresh.filter(
+            (i) => i.severity?.toUpperCase() === "CRITICAL"
+          );
+
+          if (criticalFresh.length > 0) {
+            const camId = criticalFresh[0].location || "CAMERA-1";
+            await fetchHospitalRecs(camId);
+          } else {
+            setHospitalRecs([]);
           }
         } catch (_) {}
         setIsSampleRunning(false);
@@ -504,6 +544,78 @@ const LiveMonitoring = () => {
           </div>
         </div>
 
+        {/* ── RUN SUMMARY (this run only) ─────────────────────────────── */}
+        {runSummary && (
+          <div className="bg-white border border-[#DCD7C9] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2.5 mb-4">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <h2 className="text-lg font-black tracking-tight">Sample Run Results</h2>
+            </div>
+            {runSummary.total === 0 ? (
+              <p className="text-sm text-[#3F4E4F]">
+                No incidents were detected during this run.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="bg-[#F8F5F0] rounded-xl px-4 py-3 border border-[#DCD7C9]/60">
+                  <p className="text-[10px] uppercase font-mono text-[#3F4E4F] tracking-wider">This Run</p>
+                  <h3 className="text-2xl font-black mt-1">{runSummary.total}</h3>
+                </div>
+                <div className="bg-rose-50 rounded-xl px-4 py-3 border border-rose-200">
+                  <p className="text-[10px] uppercase font-mono text-rose-600 tracking-wider">Critical</p>
+                  <h3 className="text-2xl font-black mt-1 text-rose-600">{runSummary.CRITICAL}</h3>
+                </div>
+                <div className="bg-orange-50 rounded-xl px-4 py-3 border border-orange-200">
+                  <p className="text-[10px] uppercase font-mono text-orange-600 tracking-wider">High</p>
+                  <h3 className="text-2xl font-black mt-1 text-orange-600">{runSummary.HIGH}</h3>
+                </div>
+                <div className="bg-yellow-50 rounded-xl px-4 py-3 border border-yellow-200">
+                  <p className="text-[10px] uppercase font-mono text-yellow-700 tracking-wider">Medium</p>
+                  <h3 className="text-2xl font-black mt-1 text-yellow-700">{runSummary.MEDIUM}</h3>
+                </div>
+                <div className="bg-green-50 rounded-xl px-4 py-3 border border-green-200">
+                  <p className="text-[10px] uppercase font-mono text-green-700 tracking-wider">Low</p>
+                  <h3 className="text-2xl font-black mt-1 text-green-700">{runSummary.LOW}</h3>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── HOSPITAL RECOMMENDATION (only if CRITICAL this run) ─────────── */}
+        {hospitalRecs.length > 0 && (
+          <div className="bg-rose-600 rounded-2xl p-6 shadow-md">
+            <div className="flex items-center gap-2.5 mb-4">
+              <Hospital className="w-5 h-5 text-white" />
+              <h2 className="text-lg font-black tracking-tight text-white">
+                Critical Incident — Recommended Hospitals
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {hospitalRecs.map((h, idx) => (
+                <div key={h.id ?? idx} className="bg-white/10 border border-white/20 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-sm font-bold text-white">{h.name}</p>
+                    {idx === 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold tracking-wider bg-white text-rose-700">
+                        NEAREST
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-mono text-rose-50 opacity-90">{h.tier}</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-rose-50 text-xs">
+                    <Phone className="w-3 h-3" />
+                    <span className="font-mono">{h.contact_number}</span>
+                  </div>
+                  <p className="text-[11px] font-mono text-rose-50 mt-1 opacity-80">
+                    Ambulances available: {h.available_ambulances}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* PROCESSING LOGS */}
         <div className="bg-white border border-[#DCD7C9] rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2.5 mb-5">
@@ -538,61 +650,6 @@ const LiveMonitoring = () => {
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* VEHICLE ANALYTICS */}
-        <div className="rounded-2xl overflow-hidden shadow-lg border border-[#DCD7C9] bg-gradient-to-br from-[#2C3639] via-[#3F4E4F] to-[#2C3639]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-5 border-b border-white/10 bg-[#344044]/30 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-                <Activity className="w-4 h-4 text-[#DCD7C9]" />
-              </div>
-              <div>
-                <p className="text-[#A27B5C] uppercase tracking-wider text-[10px] font-mono font-bold">Computer Vision Analytics</p>
-                <h2 className="text-xl font-black text-[#F5EFE6] tracking-tight">Vehicle Categorization Matrix</h2>
-              </div>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-              </span>
-              <span className="text-green-400 uppercase font-mono text-[10px] tracking-wider font-bold">YOLO Parser Live</span>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {[
-                { label: "Cars Detected",  color: "from-[#A27B5C] to-[#6B5B4D]" },
-                { label: "Buses Tracked",  color: "from-[#8D6E63] to-[#5D4037]" },
-                { label: "Trucks Tracked", color: "from-[#4E342E] to-[#3E2723]" },
-                { label: "Bikes Logged",   color: "from-[#6B5B4D] to-[#2C3639]" },
-                { label: "Autos Logged",   color: "from-[#A27B5C] to-[#3F4E4F]" },
-              ].map((item, index) => (
-                <div key={index} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm px-4 py-4">
-                  <div className={`absolute inset-0 opacity-5 bg-gradient-to-br ${item.color}`}></div>
-                  <div className="relative z-10">
-                    <p className="text-[10px] uppercase tracking-wider text-[#D0B49F] font-mono font-bold">{item.label}</p>
-                    <h1 className="text-xl font-black text-white font-mono mt-1 opacity-40">00</h1>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl bg-gradient-to-r from-[#A27B5C] to-[#6B5B4D] p-4 border border-white/5 shadow-inner">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-white/70 font-mono font-bold">
-                    Pipeline Unified Class Aggregation Counter
-                  </p>
-                  <h1 className={`text-2xl font-black text-white font-mono tracking-tight mt-0.5 transition-all duration-500 ${stats ? "opacity-100" : "opacity-50"}`}>
-                    {String(stats?.vehicles ?? 0).padStart(4, "0")}
-                  </h1>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
