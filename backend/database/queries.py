@@ -21,6 +21,7 @@ def insert_incidents (
     collision_distance,
     speed_before_collision,
     vehicle_type="unknown",
+    dispatched_hospital=None,
     created_at=None
 ):
     connections = get_connections()
@@ -71,10 +72,11 @@ def insert_incidents (
             collision_distance,
             speed_before_collision,
             vehicle_type,
+            dispatched_hospital ,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,(
         timestamps,
         vehicle_ids,
         severity,
@@ -84,6 +86,7 @@ def insert_incidents (
         collision_distance,
         speed_before_collision,
         vehicle_type,
+        dispatched_hospital ,
         created_at
     ))
 
@@ -193,6 +196,17 @@ def get_incident_stats():
         if key in stats:
             stats[key] = count
     return stats
+def update_incident_dispatch_hospital(incident_id, hospital_name):
+    """Record which hospital an emergency alert was dispatched to."""
+    connections = get_connections()
+    cursor = connections.cursor()
+    cursor.execute("""
+        UPDATE INCIDENTS
+        SET dispatched_hospital = ?
+        WHERE id = ?
+    """, (hospital_name, incident_id))
+    connections.commit()
+    connections.close()
 
 
 if __name__ == '__main__':
