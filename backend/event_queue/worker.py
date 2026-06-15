@@ -1,50 +1,95 @@
 import time
 import threading
-from event_queue import alert_queue
-from service.dispatch_service import DispatchService
+from database.queries import get_all_incidents, update_incident_status,update_incident_dispatch_hospital
 from service.hospital_service import HospitalService
+from service.alert_service import AlertService
+from service.dispatch_service import DispatchService
+
 
 class IncidentQueueWorker:
+    """
+    Polls the INCIDENTS table for new PENDING incidents with
+    CRITICAL or HIGH severity, and for each one:
+      1. Broadcasts an emergency alert (AlertService)
+      2. Requests an ambulance dispatch (HospitalService)
+      3. Logs the dispatch outcome to disk (DispatchService)
+      4. Updates the incident's status in the DB
+    """
+
+    DISPATCH_SEVERITIES = ("CRITICAL", "HIGH")
+    POLL_INTERVAL_SECONDS = 5
+
     def __init__(self):
-        self.queue_broker = alert_queue.AlertQueue()
-        self.dispatcher = DispatchService()
-        self.medical_lookup = HospitalService()
-        self.is_running = False
+        self.hospital_service = HospitalService()
+        self.alert_service    = AlertService()
+        self.dispatch_service = DispatchService()
+        self._processed_ids   = set()
+        self._running         = False
 
     def start_processing(self):
-        """Spawns the loop container explicitly on an isolated daemon process layer."""
-        if self.is_running:
-            return
-        self.is_running = True
-        worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
-        worker_thread.start()
-        print("[QUEUE WORKER ENGINE] Background worker processing loop mounted successfully.")
+        self._running = True
+        thread = threading.Thread(target=self._loop, daemon=True)
+        thread.start()
+        print("[QUEUE WORKER] Started incident dispatch worker.")
 
-    def _worker_loop(self):
-        while self.is_running:
+    def stop_processing(self):
+        self._running = False
+
+    def _loop(self):
+        while self._running:
             try:
-                # Blocks cleanly until an event enters the queue registry
-                payload = self.queue_broker.pop_incident()
-                
-                print(f"[WORKER PROCESSING] Evaluating queued incident ID: {payload.get('incident_id')}")
-                
-                camera_id = payload.get("camera_id", "CAMERA-1")
-                incident_id = payload.get("incident_id")
-                
-                # Fetch closest dispatch center using your 1-camera-per-area mapping rules
-                assigned_unit = self.medical_lookup.get_hospital_by_camera(camera_id)
-                
-                if assigned_unit:
-                    # Write down to your dispatch log file
-                    self.dispatcher.log_dispatch_action(
-                        incident_id=incident_id,
-                        hospital_name=assigned_unit["name"],
-                        status="RESPONDING_EMERGENCY"
-                    )
-                
-                # Acknowledge completion
-                self.queue_broker.task_complete()
-                
+                self._process_pending_incidents()
             except Exception as e:
-                print(f"[QUEUE WORKER EXCEPTION] Error compiling queued task: {e}")
-                time.sleep(2) # Prevent rapid error cycling
+                print(f"[QUEUE WORKER ERROR] {e}")
+            time.sleep(self.POLL_INTERVAL_SECONDS)
+
+    def _process_pending_incidents(self):
+        records = get_all_incidents()
+
+        # Column order: id, timestamps, vehicle_ids, severity, snapshot,
+        # location, status, collision_distance, speed_before_collision,
+        # vehicle_type, created_at
+        for r in records:
+            incident_id = r[0]
+            severity    = r[3]
+            camera_id   = r[5]
+            status      = r[6]
+
+            if incident_id in self._processed_ids:
+                continue
+            if status != "PENDING":
+                continue
+            if severity not in self.DISPATCH_SEVERITIES:
+                continue
+
+            self._handle_incident(r)
+            self._processed_ids.add(incident_id)
+
+    def _handle_incident(self, record):
+        incident_id = record[0]
+        severity    = record[3]
+        camera_id   = record[5]
+
+        # ── 1. Broadcast alert ──────────────────────────────
+        self.alert_service.dispatch_emergency_alert(record)
+
+        # ── 2. Request ambulance dispatch ───────────────────
+        receipt = self.hospital_service.request_ambulance_dispatch(camera_id)
+
+        # ── 3. Log outcome ───────────────────────────────────
+        if receipt["status"] == "dispatched":
+            hospital_name = receipt["hospital_details"]["name"]
+            self.dispatch_service.log_dispatch_action(
+                incident_id, hospital_name, status="DISPATCHED"
+            )
+            print(
+                f"[DISPATCH] Incident #{incident_id} ({severity}) → {hospital_name} "
+                f"({receipt['remaining_ambulances']} ambulances remaining)"
+            )
+            update_incident_status(incident_id, "DISPATCHED")
+        else:
+            self.dispatch_service.log_dispatch_action(
+                incident_id, hospital_name="N/A", status="FAILED"
+            )
+            print(f"[DISPATCH FAILED] Incident #{incident_id} ({severity}) — {receipt.get('message')}")
+            update_incident_status(incident_id, "DISPATCH_FAILED")
