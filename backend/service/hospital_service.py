@@ -74,6 +74,14 @@ class HospitalService:
 
         ranked = sorted(hospitals, key=distance_to)
         return ranked[:limit]
+    def reset_ambulance_availability(self):
+        """Refill every hospital back to its total_ambulances count.
+        Call this before a demo run, or wire it to a button on the UI."""
+        hospitals = self._load_hospitals()
+        for h in hospitals:
+            h["available_ambulances"] = h.get("total_ambulances", h.get("available_ambulances", 0))
+        self._save_hospitals(hospitals)
+        return hospitals
 
     # --------------------------------------------------
     # DISPATCH — tries assigned hospital first, then cascades
