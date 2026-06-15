@@ -1,4 +1,7 @@
 from flask import Blueprint, jsonify, request
+from service.hospital_service import HospitalService
+
+
 from database.queries import (
     get_all_incidents,
     get_incident_by_id,
@@ -6,13 +9,13 @@ from database.queries import (
     delete_incident,
     get_incidents_by_severity,
     get_incident_stats,
+    update_incident_dispatch_hospital
 )
 
 incident_bp = Blueprint('incident_bp', __name__)
 
 
 def serialize_incident(r):
-    """Single source of truth for row → dict mapping."""
     return {
         "id": r[0],
         "timestamp": r[1],
@@ -23,7 +26,9 @@ def serialize_incident(r):
         "status": r[6],
         "collision_distance": r[7],
         "speed_before_collision": r[8],
-        "created_at": r[9],
+        "vehicle_type": r[9] if len(r) > 9 else None,
+        "dispatched_hospital": r[10] if len(r) > 10 else None,
+        "created_at": r[11] if len(r) > 11 else r[1],  # fallback to timestamps for old rows
     }
 
 
@@ -83,3 +88,13 @@ def remove_log(inc_id):
 
     delete_incident(inc_id)
     return jsonify({"message": f"Incident {inc_id} removed from tracking registry"}), 200
+
+@incident_bp.route('/api/hospitals/reset', methods=['POST'])
+def reset_hospitals():
+    hospitals = HospitalService().reset_ambulance_availability()
+    return jsonify({"message": "Ambulance availability reset", "hospitals": hospitals}), 200
+
+@incident_bp.route('/api/hospitals/nearest/<string:camera_id>', methods=['GET'])
+def nearest_hospitals(camera_id):
+    hospitals = HospitalService().get_nearest_hospitals(camera_id, limit=3)
+    return jsonify(hospitals), 200
