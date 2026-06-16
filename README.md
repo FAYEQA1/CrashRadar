@@ -1,190 +1,127 @@
-# CrashRadar 
+# CrashRadar 🚨
 
-AI-powered accident detection and emergency response system built using **YOLOv8**, **OpenCV**, **Flask**, **SQLite**, and **React**.
-
-CrashRadar monitors CCTV/video feeds, detects potential accidents in real time, estimates severity, stores incident data, and assists emergency response workflows.
-
----
-
-## Features
-
-*  Real-time vehicle detection using YOLOv8
-*  Accident detection and monitoring
-*  Severity estimation
-*  Hospital recommendation support
-*  Location tracking
-*  Incident snapshot generation
-*  SQLite-based incident storage
-*  REST API with Flask
-*  React frontend dashboard
-*  Support for multiple test video feeds
+AI-powered accident detection and emergency response system using YOLO, OpenCV, Flask, and React.
 
 ---
 
 ## Project Structure
 
+```bash
 ```text
 CrashRadars/
 │
 ├── backend/
 │   │
-│   ├── event_queue/
-│   ├── logs/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   ├── service/
-│   ├── static/
-│   │
-│   ├── test_vedio/
-│   │   ├── sample1.mp4
-│   │   ├── sample2.mp4
-│   │   └── sample3.mp4
-│   │
-│   ├── utils/
-│   │   ├── geo_utils.py
-│   │   ├── image_utils.py
-│   │   └── video_utils.py
-│   │
 │   ├── app.py
 │   ├── config.py
-│   ├── template.py
 │   ├── requirements.txt
-│   └── yolov8m.pt
+│   ├── template.py
+│
+│   ├── models/
+│   │   ├── yolo_model.py
+│   │   └── tracker.py
+│
+│   ├── service/
+│   │   ├── detection_service.py
+│   │   ├── severity_service.py
+│   │   ├── alert_service.py
+│   │   ├── hospital_service.py
+│   │   ├── dispatch_service.py
+│   │   └── camera_service.py
+│
+│   ├── database/
+│   │   ├── db.py
+│   │   ├── models.py
+│   │   └── queries.py
+│
+│   ├── routes/
+│   │   └── incident_routes.py
+│
+│   ├── schemas/
+│   │   └── alert_schema.json
+│
+│   ├── event_queue/
+│   │   ├── alert_queue.py
+│   │   └── worker.py
+│
+│   ├── logs/
+│   │   └── dispatch.log
+│
+│   ├── static/
+│   │   └── snapshots/
+│
+│   ├── utils/
+│   │   ├── video_utils.py
+│   │   ├── image_utils.py
+│   │   └── geo_utils.py
+│
+│   └── test_vedio/
+│       ├── sample1.mp4
+│       ├── sample2.mp4
+│       └── sample3.mp4
+│
+├── frontend/
+│   │
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.js
 │
 ├── database/
 │   └── accidents.db
 │
-├── frontend/
-│
 ├── README.md
-├── yolov8l.pt
+├── .gitignore
+├── yolov8n.pt
 ├── yolov8m.pt
-└── yolov8n.pt
+└── yolov8l.pt
+
+
 ```
+
+---
+
+## Features
+
+- Real-time accident detection
+- YOLO-based vehicle monitoring
+- Severity estimation
+- Emergency dispatch alerts
+- Live dashboard with React
+- CCTV feed integration
+- Hospital recommendation system
 
 ---
 
 ## Tech Stack
 
 ### Backend
-
-* Python
-* Flask
-* OpenCV
-* YOLOv8
-* SQLite
+- Flask
+- OpenCV
+- YOLOv8
+- SQLite
 
 ### Frontend
-
-* React
-* Vite
-* Tailwind CSS
-
-### AI / Computer Vision
-
-* Ultralytics YOLOv8
-* Object Tracking
-* Video Processing
+- React
+- Vite
+- Tailwind CSS
 
 ---
 
 ## Installation
 
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/CrashRadar.git
-cd CrashRadar
-```
-
----
-
-### 2. Backend Setup
+### Backend
 
 ```bash
 cd backend
-
 pip install -r requirements.txt
-```
-
-Run the backend:
-
-```bash
 python app.py
 ```
 
----
-
-### 3. Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
-
 npm install
 npm run dev
-```
-
----
-
-## Database
-
-CrashRadar uses SQLite for storing incident records.
-
-Database location:
-
-```text
-database/accidents.db
-```
-
-Main incident fields:
-
-* id
-* timestamps
-* vehicle_ids
-* severity
-* snapshot
-* location
-* status
-* collision_distance
-* speed_before_collision
-* vehicle_type
-* dispatched_hospital
-* created_at
-
----
-
-## How It Works
-
-1. Video feed is processed frame by frame.
-2. YOLOv8 detects and tracks vehicles.
-3. Potential collisions are identified.
-4. Accident severity is estimated.
-5. Incident data is stored in SQLite.
-6. Snapshots are generated.
-7. Emergency response information is prepared.
-8. Results are displayed on the dashboard.
-
----
-
-## Future Improvements
-
-* Live CCTV integration
-* Real-time emergency dispatch
-* SMS and email notifications
-* GPS-based ambulance routing
-* Cloud database support
-* Multi-camera monitoring
-* Advanced severity prediction
-
----
-
-## License
-
-This project is for educational and research purposes.
-
----
-
-
-```
 ```
