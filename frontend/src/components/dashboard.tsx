@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   ArrowLeft,
   Flame,
+  Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -52,6 +53,28 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+  const handleDelete = async (id) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this incident?"
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/incidents/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete incident");
+    }
+
+    // Refresh dashboard after deleting
+    fetchData();
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   useEffect(() => { fetchData(); }, []);
   useEffect(() => { setPage(1); }, [incidents.length]);
@@ -194,6 +217,7 @@ const Dashboard = () => {
                     <th className="px-6 py-3.5">Severity</th>
                     <th className="px-6 py-3.5">Location</th>
                     <th className="px-6 py-3.5">Time</th>
+                    <th className="px-6 py-3.5 ">Delete</th>
                     
                   </tr>
                 </thead>
@@ -214,7 +238,15 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-[#3F4E4F] font-medium">{incident.location}</td>
                       <td className="px-6 py-4 text-[#3F4E4F] opacity-90">{formatTime(incident.created_at)}</td>
-                      
+                      <td>
+                        <button
+                          onClick={() => handleDelete(incident.id)}
+                          className="p-2 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Delete Incident"
+                        >
+                          <Trash2 className="w-5 h-5 text-red-600 hover:text-red-700" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
