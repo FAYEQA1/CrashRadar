@@ -194,7 +194,7 @@ const Dashboard = () => {
                     <th className="px-6 py-3.5">Severity</th>
                     <th className="px-6 py-3.5">Location</th>
                     <th className="px-6 py-3.5">Time</th>
-                    <th className="px-6 py-3.5 text-right">Status</th>
+                    
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCD7C9]/40 text-sm">
@@ -214,13 +214,7 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-[#3F4E4F] font-medium">{incident.location}</td>
                       <td className="px-6 py-4 text-[#3F4E4F] opacity-90">{formatTime(incident.created_at)}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                          incident.status === "PENDING"  ? "text-orange-600 bg-orange-50" :
-                          incident.status === "RESOLVED" ? "text-slate-500 bg-slate-100" :
-                                                           "text-blue-600 bg-blue-50"
-                        }`}>{incident.status}</span>
-                      </td>
+                      
                     </tr>
                   ))}
                 </tbody>
