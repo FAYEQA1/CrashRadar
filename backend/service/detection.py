@@ -11,7 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ultralytics import YOLO
 from models.tracker import VehicleTracker
 from database.queries import insert_incidents
-
+from utils.camera_loader import get_camera
+from utils.hospital_loader import get_hospital
 
 MIN_CONFIDENCE               = 0.45
 PIXEL_TO_METER               = 0.047
@@ -210,12 +211,17 @@ def draw_hud(frame, total_vehicles, incident_count):
         cv2.putText(frame, line, (8, y), FONT_SMALL, 0.5, (200, 255, 200), 1, cv2.LINE_AA)
 
 def save_snapshot(frame, label):
-    filename = f"{label}_{int(time.time() * 1000)}.jpg"
-    path = os.path.join(SNAPSHOT_FOLDER, filename)
-    cv2.imwrite(path, frame)
-    return path
+    prefix = label.split("_")[0]      # accident or brake
+    existing = [
+        f for f in os.listdir(SNAPSHOT_FOLDER)
+        if f.startswith(prefix) and f.endswith(".jpg")
+    ]
+    filename = f"{prefix}_{len(existing) + 1}.jpg"
 
+    abs_path = os.path.join(SNAPSHOT_FOLDER, filename)
+    cv2.imwrite(abs_path, frame)
 
+    return f"static/snapshots/{filename}"
 # ── Detection service ─────────────────────────────────────────────────────────
 class DetectionService:
     def run_inference(self, video_source: str, camera_id: str = "CAMERA-1"):
@@ -431,24 +437,53 @@ class DetectionService:
             if pending_brake_snap:
                 v_id, decel_kmh, severity, prev_speed, snap_label = pending_brake_snap
                 snap_path = save_snapshot(frame, snap_label)
+                camera = get_camera(camera_id)
+                hospital = get_hospital(camera_id)
+
+                camera = get_camera(camera_id)
+                hospital = get_hospital(camera_id)
+
+                location_name = camera["location_name"] if camera else camera_id
+
+                hospital_name = (
+                    hospital["name"]
+                    if hospital
+                    else "Unknown Hospital"
+                )
+                print("Camera:", camera)
+                print("Hospital:", hospital)
+                print("Location:", location_name)
+                print("Hospital Name:", hospital_name)
                 insert_incidents(
                     timestamps=now_str(), vehicle_ids=str(v_id),
                     severity=severity, snapshot=snap_path,
-                    location=camera_id, status="PENDING",
+                    location=location_name, status="PENDING",
                     collision_distance=-1.0,
                     speed_before_collision=round(prev_speed, 2),
+                    dispatched_hospital=hospital_name,  
                 )
                 pending_brake_snap = None
 
             if pending_accident_snap:
                 id_a, id_b, col_type, severity, meter_dist, max_speed, snap_label = pending_accident_snap
                 snap_path = save_snapshot(frame, snap_label)
+                camera = get_camera(camera_id)
+                hospital = get_hospital(camera_id)
+
+                location_name = camera["location_name"] if camera else camera_id
+
+                hospital_name = (
+                    hospital["name"]
+                    if hospital
+                    else "Unknown Hospital"
+)
                 insert_incidents(
                     timestamps=now_str(), vehicle_ids=f"{id_a},{id_b}",
                     severity=severity, snapshot=snap_path,
-                    location=camera_id, status="PENDING",
+                    location=location_name, status="PENDING",
                     collision_distance=round(meter_dist, 3),
                     speed_before_collision=round(max_speed, 3),
+                    dispatched_hospital=hospital_name,
                 )
                 pending_accident_snap = None
 
