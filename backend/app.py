@@ -59,6 +59,7 @@ def get_incidents():
     try:
         records = get_all_incidents()
         incidents_list = []
+        print(records[0]) 
         for r in records:
             incidents_list.append({
                 "id": r[0],
@@ -70,7 +71,9 @@ def get_incidents():
                 "status": r[6],
                 "collision_distance_m": r[7],
                 "speed_before_collision_ms": r[8],
-                "created_at": r[9]
+                "created_at": r[9],
+                "vehicle_type": r[10],
+                "dispatched_hospital": r[11],
             })
         return jsonify(incidents_list), 200
     except Exception as e:
