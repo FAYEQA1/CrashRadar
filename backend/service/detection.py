@@ -516,7 +516,7 @@ if __name__ == "__main__":
         if not candidates:
             print(f"ERROR: No video files found in {test_folder}")
             sys.exit(1)
-        video_path = os.path.join(test_folder, candidates[0])
+        video_path = os.path.join(test_folder, candidates[3])
         print(f"No --video specified. Auto-selected: {video_path}")
     else:
         video_path = args.video
