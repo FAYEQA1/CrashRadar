@@ -18,6 +18,8 @@ import {
 import { Link } from "react-router-dom";
 
 const API_BASE = "http://localhost:5000/api";
+// Base host helper to resolve relative backend paths if needed
+const BACKEND_HOST = "http://localhost:5000"; 
 
 const Dashboard = () => {
   const [incidents, setIncidents] = useState([]);
@@ -53,28 +55,25 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
   const handleDelete = async (id) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this incident?"
-  );
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this incident?"
+    );
+    if (!confirmDelete) return;
 
-  if (!confirmDelete) return;
-
-  try {
-    const response = await fetch(`${API_BASE}/incidents/${id}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to delete incident");
+    try {
+      const response = await fetch(`${API_BASE}/incidents/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete incident");
+      }
+      fetchData();
+    } catch (err) {
+      alert(err.message);
     }
-
-    // Refresh dashboard after deleting
-    fetchData();
-  } catch (err) {
-    alert(err.message);
-  }
-};
+  };
 
   useEffect(() => { fetchData(); }, []);
   useEffect(() => { setPage(1); }, [incidents.length]);
@@ -82,10 +81,21 @@ const Dashboard = () => {
   const totalPages      = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
   const pagedIncidents  = incidents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Use snapshot_url directly — Flask already builds the full URL
-  const snapshotIncidents = incidents
-    .filter((i) => i.snapshot_url)
-    .slice(0, 6);
+  // Robust URL formatting builder
+  const resolveImageUrl = (url) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+    // If Flask sends a relative path like "/static/snapshots/1.jpg"
+    return `${BACKEND_HOST}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
+  // Safely extract the 5 absolute latest snapshots from across all incidents
+  const snapshotIncidents = [...incidents]
+    .filter((i) => i.snapshot_url || i.image_url) // handles key variation fallback
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
 
   const formatTime = (timestamp) => {
     if (!timestamp) return "—";
@@ -94,11 +104,11 @@ const Dashboard = () => {
   };
 
   const statCards = [
-    { title: "Total Incidents", value: stats.total,    sub: "All detections",      glow: "hover:shadow-red-500/10 border-l-4 border-l-red-500",    icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
-    { title: "Critical",        value: stats.critical,  sub: "Immediate response",  glow: "hover:shadow-rose-600/10 border-l-4 border-l-rose-600",  icon: <Flame        className="w-5 h-5 text-rose-600" /> },
-    { title: "High",            value: stats.high,      sub: "Priority dispatch",   glow: "hover:shadow-orange-500/10 border-l-4 border-l-orange-500", icon: <Siren     className="w-5 h-5 text-orange-500" /> },
-    { title: "Medium",          value: stats.medium,    sub: "Needs review",        glow: "hover:shadow-yellow-500/10 border-l-4 border-l-yellow-500", icon: <ShieldAlert className="w-5 h-5 text-yellow-500" /> },
-    { title: "Low",             value: stats.low,       sub: "Normal incidents",    glow: "hover:shadow-green-500/10 border-l-4 border-l-green-500",  icon: <Activity  className="w-5 h-5 text-green-500" /> },
+    { title: "Total Incidents", value: stats.total, sub: "All detections", glow: "hover:shadow-red-500/10 border-l-4 border-l-red-500", icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
+    { title: "Critical", value: stats.critical, sub: "Immediate response", glow: "hover:shadow-rose-600/10 border-l-4 border-l-rose-600", icon: <Flame className="w-5 h-5 text-rose-600" /> },
+    { title: "High", value: stats.high, sub: "Priority dispatch", glow: "hover:shadow-orange-500/10 border-l-4 border-l-orange-500", icon: <Siren className="w-5 h-5 text-orange-500" /> },
+    { title: "Medium", value: stats.medium, sub: "Needs review", glow: "hover:shadow-yellow-500/10 border-l-4 border-l-yellow-500", icon: <ShieldAlert className="w-5 h-5 text-yellow-500" /> },
+    { title: "Low", value: stats.low, sub: "Normal incidents", glow: "hover:shadow-green-500/10 border-l-4 border-l-green-500", icon: <Activity className="w-5 h-5 text-green-500" /> },
   ];
 
   return (
@@ -188,7 +198,7 @@ const Dashboard = () => {
                   </div>
                   <p className="text-[11px] font-mono text-rose-50 mt-1.5 opacity-90">{incident.location} • Vehicles {incident.vehicle_ids}</p>
                   <p className="text-[11px] font-mono text-rose-50 mt-0.5 opacity-75">
-                    {(incident.speed_before_collision_ms * 3.6).toFixed(1)} km/h • {formatTime(incident.created_at)}
+                    {incident.speed_before_collision_ms ? (incident.speed_before_collision_ms * 3.6).toFixed(1) : "0.0"} km/h • {formatTime(incident.created_at)}
                   </p>
                 </div>
               ))}
@@ -217,8 +227,7 @@ const Dashboard = () => {
                     <th className="px-6 py-3.5">Severity</th>
                     <th className="px-6 py-3.5">Location</th>
                     <th className="px-6 py-3.5">Time</th>
-                    <th className="px-6 py-3.5 ">Delete</th>
-                    
+                    <th className="px-6 py-3.5">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DCD7C9]/40 text-sm">
@@ -279,9 +288,9 @@ const Dashboard = () => {
               <h2 className="text-xl font-black mt-1">System Infrastructure</h2>
               <div className="mt-5 space-y-2.5">
                 {[
-                  { icon: <Cpu className="w-4 h-4 text-[#A27B5C]" />, label: "YOLOv8 Core Model",    status: "ACTIVE",      ok: true },
+                  { icon: <Cpu className="w-4 h-4 text-[#A27B5C]" />, label: "YOLOv8 Core Model", status: "ACTIVE", ok: true },
                   { icon: <Database className="w-4 h-4 text-[#A27B5C]" />, label: "Incident Registry DB", status: error ? "DISCONNECTED" : "CONNECTED", ok: !error },
-                  { icon: <Radio className="w-4 h-4 text-[#A27B5C]" />, label: "Live Node Streams",   status: "RUNNING",     ok: true },
+                  { icon: <Radio className="w-4 h-4 text-[#A27B5C]" />, label: "Live Node Streams", status: "RUNNING", ok: true },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-3 hover:bg-white/10 transition-colors">
                     <div className="flex items-center gap-3">{row.icon}<p className="text-xs font-mono">{row.label}</p></div>
@@ -317,39 +326,64 @@ const Dashboard = () => {
               {!loading && snapshotIncidents.length === 0 && (
                 <p className="col-span-full text-sm text-[#3F4E4F] text-center py-8">No snapshots available yet.</p>
               )}
-              {snapshotIncidents.map((incident) => (
-                <div
-                  key={incident.id}
-                  onClick={() => window.open(incident.snapshot_url, "_blank")}
-                  className="group h-32 rounded-xl bg-gradient-to-br from-[#2C3639] to-[#3F4E4F] relative overflow-hidden border border-[#DCD7C9]/60 shadow-sm cursor-pointer"
-                >
-                  {/* ── Actual snapshot image ── */}
-                  <img
-                    src={incident.snapshot_url}
-                    alt={`Incident #${incident.id}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                  />
-                  {/* Dark hover overlay */}
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/50 transition-colors" />
-                  {/* Label */}
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <p className="text-white text-xs font-black tracking-wide drop-shadow">INCIDENT #{incident.id}</p>
-                    <p className="text-[#DCD7C9] font-mono text-[9px] uppercase tracking-wider mt-0.5 drop-shadow">
-                      {incident.location} • {incident.severity}
-                    </p>
+              {snapshotIncidents.map((incident) => {
+                const imgUrl = resolveImageUrl(incident.snapshot_url || incident.image_url);
+                return (
+                  <div
+                    key={incident.id}
+                    onClick={() => imgUrl && window.open(imgUrl, "_blank")}
+                    className="group relative h-44 overflow-hidden rounded-xl cursor-pointer shadow-lg border border-[#DCD7C9] bg-gray-100"
+                  >
+                    {imgUrl ? (
+                      <img
+                        src={imgUrl}
+                        alt={`Incident ${incident.id}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        onError={(e) => {
+                          // Fallback if the asset breaks completely
+                          e.target.onerror = null; 
+                          e.target.src = "https://placehold.co/600x400/2c3639/fff?text=Image+Error";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#2C3639] text-white font-mono text-xs">No Asset Path</div>
+                    )}
+
+                    {/* Dark Overlay */}
+                    <div className="absolute inset-0 bg-black/25 group-hover:bg-black/45 transition" />
+
+                    {/* Severity Badge */}
+                    <div className="absolute top-3 right-3">
+                      <span
+                        className={`px-2 py-1 rounded text-[10px] font-bold ${
+                          incident.severity === "CRITICAL"
+                            ? "bg-red-600 text-white"
+                            : incident.severity === "HIGH"
+                            ? "bg-orange-500 text-white"
+                            : incident.severity === "MEDIUM"
+                            ? "bg-yellow-400 text-black"
+                            : "bg-green-500 text-white"
+                        }`}
+                      >
+                        {incident.severity}
+                      </span>
+                    </div>
+
+                    {/* Bottom Info */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                      <h3 className="text-white font-bold text-sm">
+                        Incident #{incident.id}
+                      </h3>
+                      <p className="text-gray-200 text-xs truncate">
+                        📍 {incident.location}
+                      </p>
+                      <p className="text-gray-300 text-[11px]">
+                        🕒 {formatTime(incident.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  {/* Severity badge */}
-                  <div className="absolute top-2 right-2">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
-                      incident.severity === "CRITICAL" ? "bg-rose-600 text-white" :
-                      incident.severity === "HIGH"     ? "bg-orange-500 text-white" :
-                      incident.severity === "MEDIUM"   ? "bg-yellow-400 text-black" :
-                                                         "bg-green-500 text-white"
-                    }`}>{incident.severity}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

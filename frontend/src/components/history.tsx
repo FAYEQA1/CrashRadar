@@ -169,7 +169,9 @@ const IncidentHistory = () => {
                     </span>
                   </td>
                   <td className="py-4 px-6 text-center font-mono font-bold text-[#2C3639]/80">
-                    {log.dispatched_hospital || "Not Assigned"}
+                    {(log.severity === "CRITICAL" || log.severity === "HIGH")
+                      ? (log.dispatched_hospital || "Not Assigned")
+                      : "-"}
                   </td>
                   <td className="py-4 px-6 text-center">
                     <span className={`
