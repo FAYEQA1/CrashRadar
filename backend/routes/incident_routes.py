@@ -15,6 +15,7 @@ from database.queries import (
 incident_bp = Blueprint('incident_bp', __name__)
 
 
+
 def serialize_incident(r):
     return {
         "id": r[0],
@@ -26,11 +27,10 @@ def serialize_incident(r):
         "status": r[6],
         "collision_distance": r[7],
         "speed_before_collision": r[8],
-        "vehicle_type": r[9] if len(r) > 9 else None,
-        "dispatched_hospital": r[10] if len(r) > 10 else None,
-        "created_at": r[11] if len(r) > 11 else r[1],  # fallback to timestamps for old rows
+        "created_at": r[9],
+        "vehicle_type": r[10],
+        "dispatched_hospital": r[11],
     }
-
 
 @incident_bp.route('/api/incidents', methods=['GET'])
 def fetch_all():
