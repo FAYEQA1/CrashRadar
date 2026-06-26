@@ -28,7 +28,7 @@ The platform also provides an interactive dashboard for authorities to monitor l
 
 ---
 
-## 📸 Automatic Snapshot Capture
+##  Automatic Snapshot Capture
 
 Whenever an accident is detected:
 
@@ -67,7 +67,7 @@ Medium and Low incidents remain unassigned.
 
 ---
 
-## 📊 Analytics Dashboard
+##  Analytics Dashboard
 
 The dashboard provides:
 
@@ -150,7 +150,7 @@ Administrators can:
 
 ---
 
-# 📂 Project Structure
+#  Project Structure
 
 ```text
 CrashRadars/
@@ -224,7 +224,7 @@ CrashRadars/
 
 ---
 
-# ⚙️ Installation
+#  Installation
 
 ## Clone Repository
 
@@ -290,7 +290,7 @@ http://localhost:5173
 
 ---
 
-# 📡 API Endpoints
+#  API Endpoints
 
 ### Get all incidents
 
@@ -336,7 +336,7 @@ DELETE /api/incidents/:id
 
 ---
 
-# 📊 Dashboard Modules
+#  Dashboard Modules
 
 ✔ Live Metrics
 
@@ -358,7 +358,7 @@ DELETE /api/incidents/:id
 
 ---
 
-# 🎯 Workflow
+#  Workflow
 
 ```text
 Live Camera Feed
@@ -423,7 +423,7 @@ Dashboard Update
 
 ---
 
-# ⭐ Support
+#  Support
 
 If you found this project useful, consider giving it a ⭐ on GitHub.
 
