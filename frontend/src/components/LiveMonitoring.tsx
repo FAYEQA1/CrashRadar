@@ -34,7 +34,6 @@ const SEVERITY_BADGE = {
   LOW:      "bg-green-50 border-green-200 text-green-700",
 };
 
-// Derive vehicle counts from incidents
 function deriveStats(incidents) {
   const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, MODERATE: 0, LOW: 0 };
   const totalVehicleIds = new Set();
@@ -61,36 +60,20 @@ function deriveStats(incidents) {
   };
 }
 
-// Severity breakdown for ONLY this run's fresh incidents
-function deriveRunSummary(freshIncidents) {
-  const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  for (const inc of freshIncidents) {
-    const sev = inc.severity?.toUpperCase();
-    if (sev in counts) counts[sev]++;
-  }
-  return {
-    total: freshIncidents.length,
-    ...counts,
-  };
-}
-
 const LiveMonitoring = () => {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoPreview,  setVideoPreview]  = useState(null);
   const [isAnalysing,   setIsAnalysing]   = useState(false);
 
-  // Sample feed state
   const [isSampleRunning, setIsSampleRunning] = useState(false);
   const [sampleDone,      setSampleDone]      = useState(false);
   const [sampleError,     setSampleError]     = useState(null);
   const [incidents,       setIncidents]       = useState([]);
   const [stats,           setStats]           = useState(null);
-  const [runSummary,      setRunSummary]      = useState(null);
   const [hospitalRecs,    setHospitalRecs]    = useState([]);
   const pollRef        = useRef(null);
   const baselineRef    = useRef(0);
 
-  // Camera state
   const [isCameraMode, setIsCameraMode] = useState(false);
   const [cameraError,  setCameraError]  = useState(null);
   const cameraStreamRef = useRef(null);
@@ -126,7 +109,8 @@ const LiveMonitoring = () => {
           return;
         }
 
-        setIncidents(data.slice(0, 3));
+        // ✅ CHANGED: slice(0,1) — only one incident for the Video Analysis card
+        setIncidents(data.slice(0, 1));
         setStats(deriveStats(data));
       } catch (error) {
         console.error("Polling Error:", error);
@@ -153,7 +137,6 @@ const LiveMonitoring = () => {
     setIncidents([]);
     setStats(null);
     setCameraError(null);
-    setRunSummary(null);
     setHospitalRecs([]);
   };
 
@@ -183,7 +166,7 @@ const LiveMonitoring = () => {
     setTimeout(() => { setIsAnalysing(false); alert("Analysis complete (Simulation)"); }, 3000);
   };
 
-  // ── fetch hospital recommendations for a camera ─────────────────────────────
+  // ── fetch hospital recommendations ────────────────────────────────────────
 
   const fetchHospitalRecs = async (cameraId) => {
     try {
@@ -206,14 +189,12 @@ const LiveMonitoring = () => {
     setIsSampleRunning(true);
 
     try {
-      // 1. Snapshot current count so we only surface new incidents
       try {
         const snap = await fetch(`${API_BASE}/incidents`);
         const existing = await snap.json();
         baselineRef.current = Array.isArray(existing) ? existing.length : 0;
       } catch (_) { baselineRef.current = 0; }
 
-      // 2. Kick off detection on sample1.mp4
       const res = await fetch(`${API_BASE}/detection/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,10 +206,8 @@ const LiveMonitoring = () => {
         throw new Error(err.message || `Server error ${res.status}`);
       }
 
-      // 3. Poll for results
       startPolling();
 
-      // 4. Stop polling after 30s (adjust to match your video length)
       setTimeout(async () => {
         clearPoll();
         try {
@@ -238,14 +217,11 @@ const LiveMonitoring = () => {
           const fresh = data.slice(0, freshCount);
 
           if (fresh.length > 0) {
-            setIncidents(data.slice(0, 3));
+            // ✅ CHANGED: slice(0,1) — only one result
+            setIncidents(data.slice(0, 1));
             setStats(deriveStats(data));
           }
 
-          // Run summary for THIS run only
-          setRunSummary(deriveRunSummary(fresh));
-
-          // If any CRITICAL incident occurred this run, recommend hospitals
           const criticalFresh = fresh.filter(
             (i) => i.severity?.toUpperCase() === "CRITICAL"
           );
@@ -306,7 +282,6 @@ const LiveMonitoring = () => {
     : "Idle";
 
   const isLiveOrRunning = isAnalysing || isCameraMode || isSampleRunning;
-  const severityCounts  = stats?.severity ?? { CRITICAL: 0, HIGH: 0, MODERATE: 0, LOW: 0 };
 
   // ── render ─────────────────────────────────────────────────────────────────
 
@@ -379,7 +354,6 @@ const LiveMonitoring = () => {
                 </div>
 
               ) : (
-                /* Upload / sample drop zone */
                 <label className="relative border-2 border-dashed border-[#A27B5C]/30 bg-white/[0.02] rounded-xl min-h-[340px] flex flex-col items-center justify-center text-center p-6 cursor-pointer hover:border-[#A27B5C] hover:bg-white/[0.04] transition-all duration-300 group overflow-hidden">
                   <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
 
@@ -503,84 +477,99 @@ const LiveMonitoring = () => {
             </div>
           </div>
 
-          {/* RIGHT SIDEBAR */}
+          {/* RIGHT SIDEBAR — intentionally left minimal, removed Severity & Registry cards */}
           <div className="space-y-4">
-
-            <div className="bg-white border border-[#DCD7C9] rounded-2xl p-5 shadow-sm">
-              <h3 className="text-base font-black tracking-tight text-[#2C3639] mb-4">Severity Breakdowns</h3>
-              <div className="space-y-2">
-                {["CRITICAL", "HIGH", "MODERATE", "LOW"].map((label) => (
-                  <div key={label} className={`flex items-center justify-between border border-[#DCD7C9]/60 border-l-4 rounded-xl px-4 py-2.5 ${SEVERITY_COLORS[label]}`}>
-                    <span className="font-mono text-xs font-bold tracking-wider">{label}</span>
-                    <span className={`text-lg font-black font-mono transition-all duration-500 ${stats ? "opacity-100" : "opacity-40"}`}>
-                      {String(severityCounts[label] ?? 0).padStart(2, "0")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-[#A27B5C] via-[#6B5B4D] to-[#2C3639] rounded-2xl p-5 text-white shadow-md border border-[#A27B5C]/20">
-              <div className="flex items-center gap-2 mb-6 pb-3 border-b border-white/10">
-                <Activity className="w-4 h-4 text-[#DCD7C9]" />
-                <h3 className="text-sm font-mono uppercase tracking-wider font-bold">Live Stream Registry</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                  <p className="text-[10px] uppercase font-mono text-white/50 tracking-wider">Vehicles Logged</p>
-                  <h2 className={`text-3xl font-black mt-1 font-mono tracking-tight transition-all duration-500 ${stats ? "opacity-100" : "opacity-40"}`}>
-                    {String(stats?.vehicles ?? 0).padStart(2, "0")}
-                  </h2>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                  <p className="text-[10px] uppercase font-mono text-white/50 tracking-wider">Accidents Flagged</p>
-                  <h2 className={`text-3xl font-black mt-1 font-mono tracking-tight transition-all duration-500 ${stats ? "opacity-100" : "opacity-40"}`}>
-                    {String(stats?.accidents ?? 0).padStart(2, "0")}
-                  </h2>
-                </div>
-              </div>
-            </div>
-
+            {/* You can add future sidebar widgets here */}
           </div>
+
         </div>
 
-        {/* ── RUN SUMMARY (this run only) ─────────────────────────────── */}
-        {runSummary && (
-          <div className="bg-white border border-[#DCD7C9] rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2.5 mb-4">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <h2 className="text-lg font-black tracking-tight">Sample Run Results</h2>
-            </div>
-            {runSummary.total === 0 ? (
-              <p className="text-sm text-[#3F4E4F]">
-                No incidents were detected during this run.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div className="bg-[#F8F5F0] rounded-xl px-4 py-3 border border-[#DCD7C9]/60">
-                  <p className="text-[10px] uppercase font-mono text-[#3F4E4F] tracking-wider">This Run</p>
-                  <h3 className="text-2xl font-black mt-1">{runSummary.total}</h3>
+        {/* ✅ VIDEO ANALYSIS CARD — replaces all 4 removed sections */}
+        <div className="bg-white border border-[#DCD7C9] rounded-2xl p-6 shadow-sm">
+          <h2 className="text-lg font-black mb-6">
+            Video Analysis
+          </h2>
+
+          {incidents.length > 0 ? (() => {
+            const incident = incidents[0];
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* LEFT */}
+                <div className="space-y-5">
+
+                  <div>
+                    <p className="text-xs uppercase text-gray-500 font-mono">
+                      Location
+                    </p>
+                    <p className="text-xl font-bold">
+                      {incident.location}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase text-gray-500 font-mono">
+                      Time
+                    </p>
+                    <p className="font-semibold">
+                      {incident.timestamp}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase text-gray-500 font-mono">
+                      Severity
+                    </p>
+                    <span
+                      className={`inline-block px-4 py-2 rounded-lg font-bold
+                      ${
+                        incident.severity === "CRITICAL"
+                          ? "bg-red-100 text-red-700"
+                        : incident.severity === "HIGH"
+                          ? "bg-orange-100 text-orange-700"
+                        : incident.severity === "MEDIUM"
+                          ? "bg-yellow-100 text-yellow-700"
+                        : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {incident.severity}
+                    </span>
+                  </div>
+
+                  {["HIGH", "CRITICAL"].includes(incident.severity?.toUpperCase()) && (
+                    <div>
+                      <p className="text-xs uppercase text-gray-500 font-mono">
+                        Nearest Hospital
+                      </p>
+                      <p className="font-semibold">
+                        {incident.dispatched_hospital ?? "Assigning…"}
+                      </p>
+                    </div>
+                  )}
+
                 </div>
-                <div className="bg-rose-50 rounded-xl px-4 py-3 border border-rose-200">
-                  <p className="text-[10px] uppercase font-mono text-rose-600 tracking-wider">Critical</p>
-                  <h3 className="text-2xl font-black mt-1 text-rose-600">{runSummary.CRITICAL}</h3>
+
+                {/* RIGHT — snapshot image */}
+                {/* ✅ Uses relative path: static/snapshots/... so the URL resolves correctly */}
+                <div>
+                  <p className="text-xs uppercase text-gray-500 font-mono mb-2">
+                    Snapshot
+                  </p>
+                  <img
+                    src={`http://localhost:5000/${incident.snapshot}`}
+                    alt="Incident snapshot"
+                    className="rounded-xl border w-full h-72 object-cover"
+                  />
                 </div>
-                <div className="bg-orange-50 rounded-xl px-4 py-3 border border-orange-200">
-                  <p className="text-[10px] uppercase font-mono text-orange-600 tracking-wider">High</p>
-                  <h3 className="text-2xl font-black mt-1 text-orange-600">{runSummary.HIGH}</h3>
-                </div>
-                <div className="bg-yellow-50 rounded-xl px-4 py-3 border border-yellow-200">
-                  <p className="text-[10px] uppercase font-mono text-yellow-700 tracking-wider">Medium</p>
-                  <h3 className="text-2xl font-black mt-1 text-yellow-700">{runSummary.MEDIUM}</h3>
-                </div>
-                <div className="bg-green-50 rounded-xl px-4 py-3 border border-green-200">
-                  <p className="text-[10px] uppercase font-mono text-green-700 tracking-wider">Low</p>
-                  <h3 className="text-2xl font-black mt-1 text-green-700">{runSummary.LOW}</h3>
-                </div>
+
               </div>
-            )}
-          </div>
-        )}
+            );
+          })() : (
+            <div className="text-center py-20 text-gray-500">
+              Run a sample video to view accident details.
+            </div>
+          )}
+        </div>
 
         {/* ── HOSPITAL RECOMMENDATION (only if CRITICAL this run) ─────────── */}
         {hospitalRecs.length > 0 && (
@@ -615,43 +604,6 @@ const LiveMonitoring = () => {
             </div>
           </div>
         )}
-
-        {/* PROCESSING LOGS */}
-        <div className="bg-white border border-[#DCD7C9] rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-2.5 mb-5">
-            <AlertTriangle className="w-5 h-5 text-[#A27B5C]" />
-            <h2 className="text-lg font-black tracking-tight">Recent Processing Logs</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[0, 1, 2].map((i) => {
-              const inc = incidents[i];
-              return (
-                <div key={i} className={`border border-[#DCD7C9]/70 rounded-xl p-4 bg-[#F8F5F0]/40 flex flex-col justify-between min-h-[130px] transition-all duration-500 ${inc ? "opacity-100" : "opacity-60"}`}>
-                  <div>
-                    <p className="text-[10px] text-[#A27B5C] font-mono uppercase tracking-wider font-bold">
-                      Registry Slot #0{i + 1}
-                    </p>
-                    <h3 className="text-sm font-bold text-[#2C3639] mt-2">
-                      {inc
-                        ? `${inc.severity} — Vehicle${inc.vehicle_ids?.includes(",") ? "s" : ""} #${inc.vehicle_ids}`
-                        : "No Anomalies Registered"}
-                    </h3>
-                    {inc && (
-                      <span className={`inline-block mt-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${SEVERITY_BADGE[inc.severity?.toUpperCase()] ?? SEVERITY_BADGE.LOW}`}>
-                        {inc.severity}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[#3F4E4F] text-xs opacity-70 border-t border-[#DCD7C9]/40 pt-2.5 mt-4">
-                    {inc
-                      ? `${inc.location ?? "CAMERA-1"} — ${inc.timestamp}`
-                      : "Awaiting node data intake streams..."}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
 
       </div>
     </section>
