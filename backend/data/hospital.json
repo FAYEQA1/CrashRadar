@@ -11,7 +11,7 @@
         "latitude": 17.4265,
         "longitude": 78.4121
       },
-      "assigned_zone": "CAMERA-1"
+      "assigned_camera": "CAMERA-1"
     },
     {
       "id": "hosp_02",
@@ -24,7 +24,7 @@
         "latitude": 17.4138,
         "longitude": 78.4424
       },
-      "assigned_zone": "CAMERA-2"
+      "assigned_camera": "CAMERA-2"
     },
     {
       "id": "hosp_03",
@@ -37,7 +37,7 @@
         "latitude": 17.4042,
         "longitude": 78.4482
       },
-      "assigned_zone": "CAMERA-3"
+      "assigned_camera": "CAMERA-3"
     }
   ]
 }

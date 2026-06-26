@@ -2,24 +2,35 @@
   "cameras": [
     {
       "id": "CAMERA-1",
-      "location_name": "Masab Tank Intersection",
-      "stream_source": "test_vedio/sample1.mp4",
+      "location_name": "Jubilee Hills",
+      "stream_source": "test_video/sample1.mp4",
       "status": "ACTIVE",
       "pixel_to_meter_ratio": 0.047,
       "coordinates": {
-        "latitude": 17.4023,
-        "longitude": 78.4521
+        "latitude": 17.4265,
+        "longitude": 78.4121
       }
     },
     {
       "id": "CAMERA-2",
-      "location_name": "Banjara Hills Road No. 1",
-      "stream_source": "test_vedio/sample2.mp4",
+      "location_name": "Banjara Hills",
+      "stream_source": "test_video/sample2.mp4",
       "status": "ACTIVE",
       "pixel_to_meter_ratio": 0.052,
       "coordinates": {
-        "latitude": 17.4156,
-        "longitude": 78.4411
+        "latitude": 17.4138,
+        "longitude": 78.4424
+      }
+    },
+    {
+      "id": "CAMERA-3",
+      "location_name": "Secunderabad",
+      "stream_source": "test_video/sample3.mp4",
+      "status": "ACTIVE",
+      "pixel_to_meter_ratio": 0.050,
+      "coordinates": {
+        "latitude": 17.4399,
+        "longitude": 78.4983
       }
     }
   ]
